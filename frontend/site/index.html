@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resolve Project Server</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+  <main id="login" class="login" hidden>
+    <form id="login-form" class="login-card">
+      <div class="brand brand-lg">
+        <img class="brand-logo" alt="" hidden>
+        <h1 class="brand-name">Resolve Project Server</h1>
+      </div>
+      <label>Benutzername<input name="username" autocomplete="username" required></label>
+      <label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>
+      <p class="form-error" id="login-error" role="alert"></p>
+      <button class="btn primary" type="submit">Anmelden</button>
+    </form>
+  </main>
+
+  <div id="app" hidden>
+    <header class="top">
+      <div class="top-inner">
+        <a class="brand" href="#/">
+          <img class="brand-logo" alt="" hidden>
+          <span class="brand-name">Resolve Project Server</span>
+        </a>
+        <nav class="nav" aria-label="Bereiche">
+          <a href="#/" data-view="start" id="nav-back" hidden>Zur Übersicht</a>
+          <a href="#/konfiguration" data-view="konfiguration">Konfiguration</a>
+          <a href="#/zusammenarbeit" data-view="zusammenarbeit">Zusammenarbeit</a>
+          <a href="#/server" data-view="server">Server</a>
+          <a href="#/hilfe" data-view="hilfe">Hilfe</a>
+          <details class="menu user-menu">
+            <summary id="user-name">Konto</summary>
+            <div class="menu-list">
+              <a href="#/konto">Konto bearbeiten</a>
+              <button type="button" id="logout">Abmelden</button>
+            </div>
+          </details>
+        </nav>
+      </div>
+    </header>
+    <main id="view" class="view" tabindex="-1"></main>
+  </div>
+
+  <section id="job" class="job" hidden aria-live="polite">
+    <div class="job-head">
+      <strong id="job-title"></strong>
+      <span id="job-state" class="job-state"></span>
+      <button class="btn ghost small" id="job-close">Schließen</button>
+    </div>
+    <pre id="job-log" class="job-log"></pre>
+  </section>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <dialog id="dialog" class="dialog"><form method="dialog" id="dialog-form"></form></dialog>
+</body>
+</html>

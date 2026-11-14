@@ -1,0 +1,46 @@
+name: resolve-project-server
+
+services:
+  # Web-UI + HTTPS (Caddy). Einziger Container mit Web-Ports nach außen.
+  frontend:
+    image: caddy:2-alpine
+    container_name: rps-frontend
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+      # Web-UI im lokalen Netz (wie WireBear). Hostseite frei wählbar, z. B. "9000:8543".
+      - "${ADMIN_PORT_BIND:-0.0.0.0}:8543:8543"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./frontend/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/site:/srv:ro
+      - ${DATA_DIR}/caddy/data:/data
+      - ${DATA_DIR}/caddy/config:/config
+    networks: [public, internal]
+
+  # Backend (API, Sicherungen, Versionswechsel). Kein Port nach außen,
+  # nur im internen Netz für das Frontend erreichbar.
+  backend:
+    build: ./backend
+    container_name: rps-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST_DATA_DIR: ${DATA_DIR}
+    volumes:
+      - ${DATA_DIR}:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [internal]
+
+  # Der PostgreSQL-Container wird NICHT hier definiert, sondern vom Backend
+  # erzeugt (rps-postgres-<version>), damit die Version per Web-UI wechselbar ist.
+  # Seine Daten liegen auf dem Host unter ${DATA_DIR}/postgres/<version>.
+
+networks:
+  public: {}
+  internal:
+    internal: true

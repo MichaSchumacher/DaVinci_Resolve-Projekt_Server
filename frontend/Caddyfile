@@ -1,0 +1,35 @@
+# Gemeinsame Konfiguration beider Zugänge
+(webui) {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# Nur das Frontend spricht mit dem Backend – das Backend hat keinen eigenen Port.
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# 1) Über die Domain aus dem Internet – Caddy holt automatisch ein HTTPS-Zertifikat.
+{$DOMAIN} {
+	import webui
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+# 2) Port 8543 im lokalen Netz – wie das Admin-Panel des WireBear Studio Servers.
+#    Unverschlüsselt: diesen Port NICHT am Router weiterleiten.
+http://:8543 {
+	import webui
+}

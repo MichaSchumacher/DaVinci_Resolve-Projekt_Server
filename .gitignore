@@ -1,0 +1,6 @@
+# Geheimnisse und Laufzeitdaten nie einchecken
+.env
+data/
+__pycache__/
+*.pyc
+.DS_Store
