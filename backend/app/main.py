@@ -884,8 +884,9 @@ def auth(request: Request) -> None:
 
 
 def client_ip(request: Request) -> str:
-    fwd = request.headers.get("x-forwarded-for", "")
-    return fwd.split(",")[0].strip() or (request.client.host if request.client else "?")
+    # Setzt Caddy (das Frontend) selbst – das Backend ist nur über Caddy erreichbar.
+    return (request.headers.get("x-rps-client-ip", "").strip()
+            or (request.client.host if request.client else "?"))
 
 
 def set_session(request: Request, response: Response, a: dict) -> None:

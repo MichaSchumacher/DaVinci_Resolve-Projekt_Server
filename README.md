@@ -47,11 +47,15 @@ Zugangsadresse eintragen – vorher ist „Verbinden“ gesperrt.
 
 ### Router / Firewall
 
-| Port | Zweck |
-|------|-------|
-| 80, 443 TCP | Web-UI und Let's-Encrypt-Zertifikat |
-| 5432 TCP | Verbindung der Resolve-Arbeitsplätze |
-| 8543 TCP | Web-UI unverschlüsselt im lokalen Netz – **nicht** weiterleiten |
+| Port | Am Router weiterleiten? | Zweck |
+|------|------|-------|
+| 80, 443 TCP | ja (ohne NPM) | Web-UI mit HTTPS und Let's-Encrypt-Zertifikat |
+| 5432 TCP | ja | Verbindung der Resolve-Arbeitsplätze |
+| 8543 TCP | **nein, nie** | Web-UI unverschlüsselt: für das lokale Netz und als Ziel für einen Reverse Proxy wie NPM |
+
+Port 8543 ist „intern“ in dem Sinn, dass er nie direkt aus dem Internet erreichbar
+sein darf. Ein Reverse Proxy im eigenen Netz darf ihn ansprechen – der Weg ins
+Internet ist dann trotzdem verschlüsselt (siehe [Hinter NPM](#hinter-nginx-proxy-manager-npm)).
 
 **Port 50059 (bis 50314)** gehört nicht zum Server: Resolve öffnet ihn auf jedem
 Arbeitsplatz für die Zusammenarbeit, und die Rechner verbinden sich direkt
@@ -61,6 +65,70 @@ sich mit welcher Adresse angemeldet haben, und testet deren Erreichbarkeit.
 
 Der DNS-Eintrag der Domain muss auf deine öffentliche IP zeigen. Zum lokalen Testen
 ohne Domain: `DOMAIN=:80` und im Browser `http://SERVER-IP`.
+
+## Hinter Nginx Proxy Manager (NPM)
+
+Wenn auf dem Server oder im Netz schon NPM läuft, übernimmt NPM HTTPS und das
+Zertifikat. Caddy öffnet dann kein 80/443 mehr, nur noch 8543:
+
+```
+Internet ──HTTPS 443──▶ NPM ──HTTP 8543 (nur im LAN)──▶ Web-UI
+```
+
+Am Router bleiben nur 443 (für NPM) und 5432 (für Resolve) offen.
+
+### NPM auf einem anderen Rechner
+
+In der `.env`:
+
+```env
+COMPOSE_FILE=docker-compose.yml:docker-compose.npm.yml
+ADMIN_PORT_BIND=0.0.0.0
+```
+
+In NPM einen Proxy Host anlegen:
+
+| Feld | Eintrag |
+|---|---|
+| Domain Names | `resolve.deinedomain.de` |
+| Scheme / Forward Hostname / Port | `http` · LAN-IP dieses Servers · `8543` |
+| Block Common Exploits | an |
+| Cache Assets, Websockets Support | nicht nötig |
+| SSL | Let's-Encrypt-Zertifikat anfordern, Force SSL und HTTP/2 an |
+
+Wer es strenger will, erlaubt 8543 per Firewall nur von der IP des NPM-Rechners.
+
+### NPM auf demselben Docker-Host
+
+Dann sprechen NPM und Web-UI über ein gemeinsames Docker-Netz, und 8543 muss am
+Host gar nicht offen sein. Name des NPM-Netzes herausfinden:
+
+```bash
+docker inspect <npm-container> -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+```
+
+In der `.env`:
+
+```env
+COMPOSE_FILE=docker-compose.yml:docker-compose.npm.yml:docker-compose.npm-network.yml
+NPM_NETWORK=npm_default        # Name aus dem Befehl oben
+ADMIN_PORT_BIND=127.0.0.1
+```
+
+In NPM als Ziel eintragen: `http` · `rps-frontend` · `8543`, sonst wie oben.
+
+### Was der NPM-Modus sonst noch tut
+
+- Caddy holt kein eigenes Zertifikat mehr (`DOMAIN` wird intern ignoriert).
+- Caddy übernimmt die echte Besucher-IP aus den Headern von NPM. Sonst sähe das
+  Backend für alle Anfragen nur die IP von NPM, und die Sperre nach fünf
+  Fehlanmeldungen träfe alle gemeinsam. Gefälschte `X-Forwarded-For`-Header aus dem
+  Browser werden dabei ignoriert.
+- Benötigt Docker Compose 2.24.4 oder neuer (`docker compose version`).
+
+Danach `docker compose up -d`. Port 5432 wird nicht über NPM geleitet, sondern
+weiterhin direkt am Router weitergeleitet. Läuft die Domain über Cloudflare mit
+aktivem Proxy (orange Wolke), braucht Resolve eine zweite Subdomain ohne Proxy.
 
 ## Bibliotheken und Zugänge
 

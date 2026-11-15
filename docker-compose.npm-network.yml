@@ -1,0 +1,15 @@
+# Nur wenn NPM auf DEMSELBEN Docker-Host läuft: Das Frontend tritt dem Netz von
+# NPM bei. In NPM dann als Ziel eintragen:  http  rps-frontend  8543
+# Port 8543 muss dann nicht mehr am Host offen sein (ADMIN_PORT_BIND=127.0.0.1).
+#
+# Name des NPM-Netzes herausfinden:
+#   docker inspect <npm-container> -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+
+services:
+  frontend:
+    networks: [public, internal, npm]
+
+networks:
+  npm:
+    external: true
+    name: ${NPM_NETWORK:-npm_default}

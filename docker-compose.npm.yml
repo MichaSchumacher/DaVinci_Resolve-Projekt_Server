@@ -1,0 +1,19 @@
+# NPM-Modus: Nginx Proxy Manager (oder ein anderer Reverse Proxy) übernimmt
+# HTTPS und Zertifikat. Caddy öffnet dann kein 80/443 mehr, nur noch 8543.
+#
+# Aktivieren in der .env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.npm.yml
+# Läuft NPM auf DEMSELBEN Docker-Host, zusätzlich das gemeinsame Netz:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.npm.yml:docker-compose.npm-network.yml
+#
+# Benötigt Docker Compose 2.24.4 oder neuer (wegen !override).
+
+services:
+  frontend:
+    ports: !override
+      - "${ADMIN_PORT_BIND:-0.0.0.0}:8543:8543"
+    environment:
+      # Caddy soll kein eigenes Zertifikat holen – das macht NPM.
+      DOMAIN: ":80"
+      # Absender-IP aus den Headern von NPM übernehmen (NPM steht in einem privaten Netz).
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-private_ranges}

@@ -1,3 +1,14 @@
+# Globale Optionen
+{
+	servers {
+		# Welchen vorgeschalteten Proxys Caddy die Absender-IP (X-Forwarded-For) glaubt.
+		# Standard: niemandem. Im NPM-Modus (docker-compose.npm.yml): private Netze.
+		trusted_proxies static {$TRUSTED_PROXIES:127.0.0.1/32}
+		# Von rechts lesen: eine vom Browser gefälschte X-Forwarded-For wird ignoriert.
+		trusted_proxies_strict
+	}
+}
+
 # Gemeinsame Konfiguration beider Zugänge
 (webui) {
 	encode zstd gzip
@@ -12,7 +23,10 @@
 
 	# Nur das Frontend spricht mit dem Backend – das Backend hat keinen eigenen Port.
 	handle /api/* {
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			# Echte Besucher-IP fürs Backend (u. a. Sperre nach Fehlanmeldungen)
+			header_up X-RPS-Client-IP {client_ip}
+		}
 	}
 
 	handle {
@@ -28,8 +42,9 @@
 	header Strict-Transport-Security "max-age=31536000"
 }
 
-# 2) Port 8543 im lokalen Netz – wie das Admin-Panel des WireBear Studio Servers.
-#    Unverschlüsselt: diesen Port NICHT am Router weiterleiten.
+# 2) Port 8543, unverschlüsselt – wie das Admin-Panel des WireBear Studio Servers.
+#    Für den Zugriff im lokalen Netz und als Ziel für einen Reverse Proxy (NPM).
+#    Diesen Port NIE am Router weiterleiten.
 http://:8543 {
 	import webui
 }
